@@ -1,6 +1,6 @@
 ---
 title: "Dataframes - In Class lab"
-author: "Dr. Shoemaker"
+author: "Thomas Linden"
 date: "DATA 2401"
 output: html_document
 ---
@@ -30,24 +30,22 @@ Because you're in an RProject, you don't need to set your working directory in R
 - Use the glimpse function to look at the loaded data
 
 ```{r}
-
-
+getwd()
+glimpse(grants)
 ```
 
 
 - Create a variable `org` that contains the `organization` column of the dataset
 
 ```{r}
-
-
+org <- grants$organization
 ```
 
 
 - Confirm that the "organization" column is a vector using the `is.vector()` function. (This is a useful debugging tip if you hit errors later!)
 
 ```{r}
-
-
+is.vector(org)
 ```
 
 
@@ -56,48 +54,47 @@ Now you can ask some interesting questions about the dataset:
 - What was the mean grant value?
 
 ```{r}
-
+format(mean(grants$total_amount), big.mark = ",")
 ```
 
 
 - What was the dollar amount of the largest grant?
 
 ```{r}
-
+format(max(grants$total_amount), scientific = FALSE, big.mark = ",")
 ```
 
 
 - What was the dollar amount of the smallest grant?
 
 ```{r}
-
+format(min(grants$total_amount), big.mark = ",")
 ```
 
 
 - Which organization received the largest grant?
 
 ```{r}
-
-
+grants[grants$total_amount == max(grants$total_amount), "organization"]
 ```
 
 
 - Which organization received the smallest grant?
 
 ```{r}
-
+grants[grants$total_amount == min(grants$total_amount), "organization"]
 ```
 
 - How many grants were awarded in 2010?
 
 ```{r}
-
+nrow(grants[grants$start_year == 2010,])
 ```
 
 - How much was awarded in 2010? 
 
 ```{r}
-
+format(sum(grants[grants$start_year == 2010, "total_amount"]), big.mark = ",")
 ```
 
 
@@ -123,72 +120,81 @@ Luckily, you can pass the USPersonalExpenditure variable as an argument to the `
 Do this, storing the result in a new variable
 
 ```{r}
-
+USPersonalExpendituredf <- data.frame(USPersonalExpenditure)
 ```
 
 
 What are the current column names of your dataframe?
 ```{r}
-
+colnames(USPersonalExpendituredf)
 ```
 
 
 Consider: why are they so strange? (Think about whether you could use a number like 1940 with dollar notation!)
 
+- R cannot import colnames as numerics so it prepends them with 'X' to convert to char value types.
+
 What are the current row names of your dataframe?
 ```{r}
-
+rownames(USPersonalExpendituredf)
 ```
 
 
 Add a column "Category" to your data frame that contains the rownames
 
 ```{r}
-
+USPersonalExpendituredf <- rownames_to_column(USPersonalExpendituredf, var = "Category")
+USPersonalExpendituredf
 ```
 
 Consider how this data isn't tidy. Use the `pivot_longer()` function from last class to make the data tidy. 
 
 ```{r}
-
+library(tidyverse)
+USlong <- pivot_longer(USPersonalExpendituredf,
+             -Category, 
+             names_to = "Year", 
+             values_to = "Expenditure",
+             names_transform = list(Year = ~ gsub("^X", "", .))
+             )
 ```
 
 
 How much money was spent on personal care in 1940?
 ```{r}
-
+USlong[USlong$Category == "Personal Care" & USlong$Year == "1940", 3]
 ```
 
 
 How much money was spent on Food and Tobacco in 1960?
 ```{r}
-
+USlong[USlong$Category == "Food and Tobacco" & USlong$Year == "1960", 3]
 
 ```
 
 
 What was the highest expenditure category in 1960?
 ```{r}
-
+USlong[USlong$Expenditure == max(USlong$Expenditure[USlong$Year == "1960"]),]
 
 ```
 
 
 Define a function `lowest_category` that takes in a year as a parameter, and returns the lowest spending category of that year
 ```{r}
-
-
-
-```
-
-```{r}
-
+lowest_category <- function(yvar) {
+  year_data <- USlong[USlong$Year == yvar, ]
+  min_expend <- min(year_data$Expenditure)
+  year_data[year_data$Expenditure == min_expend, -2] #Excluding Year col
+}
 ```
 
 
 Using your function, determine the lowest spending category of each year
 Hint: use the `sapply()` function to apply your function to a vector of years
 
-```{r}
+- It would be more efficient for larger vector calls to create the vector with seq, but using numerics as function arguments instead of strings will label each function output with the index of the vector instead of the year. I chose to explicitly type the years as strings and exclude the "Year" col from the function output to be cleaner for the smaller set. **See comment in code block above.**
 
+```{r}
+sapply(c("1940", "1945", "1950", "1955", "1960"), lowest_category)
 ```
